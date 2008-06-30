@@ -1,0 +1,60 @@
+#!/bin/sh
+
+while test $# -ne 0; do
+   BASE=`echo $1 | cut -d '=' -f 1 | tail -c +3`
+   SUFFIX=`echo $1 | cut -d '=' -f 2-`
+   if test "$BASE" = "prefix"; then
+      PREFIX=$SUFFIX
+      shift
+   elif test "$BASE" = "libdir"; then
+      LIBDIR=$SUFFIX
+      shift
+   elif test "$BASE" = "sharedir"; then
+      SHAREDIR=$SUFFIX
+   elif test "$BASE" = "includedir"; then
+      INCLUDEDIR=$SUFFIX
+      shift
+   elif test "$BASE" = "docdir"; then
+      DOCDIR=$SUFFIX
+      shift
+   elif test "$BASE" = "enable-libhyphen"; then
+      DEAD_LIBHYPHEN=true
+      shift
+   elif test "$BASE" = "disable-libhyphen"; then
+      DEAD_LIBHYPHEN=
+      shift
+   elif test "$BASE" = "help"; then
+      cat << EOF
+Usage: configure [longoptions]
+
+Options:
+  --prefix PREFIX	Installation prefix (default: /usr/local)
+  --libdir LIBDIR	Library directory (default: $PREFIX/lib)
+  --sharedir SHAREDIR	Directory for shared files 
+			(default: $PREFIX/share/libhyphenate)
+  --includedir INCLUDEDIR	Includefiles directory
+			(default: $PREFIX/include/hyphenate)
+  --docdir DOCDIR	Includefiles directory
+			(default: $PREFIX/share/doc/libhyphenate)
+  --enable-libhyphen    Enable replacing libhyphen
+EOF
+      exit 0
+   else
+      echo Ignored option "$BASE"
+      shift
+   fi
+done
+
+if test -z "$PREFIX"; then PREFIX=/usr/local; fi
+
+echo > src/Makefile.config
+if test -n "$PREFIX"; then echo PREFIX:=$PREFIX >> src/Makefile.config; fi
+if test -n "$LIBDIR"; then echo LIBDIR:=$LIBDIR >> src/Makefile.config; fi
+if test -n "$SHAREDIR"; then echo SHAREDIR:=$SHAREDIR >> src/Makefile.config; fi
+if test -n "$INCLUDEDIR"; then 
+   echo INCLUDEDIR:=$INCLUDEDIR >> src/Makefile.config; fi
+if test -n "$DOCDIR"; then echo DOCDIR:=$DOCDIR >> src/Makefile.config; fi
+if test -n "$DEAD_LIBHYPHEN"; then 
+   echo src-all : libhyphen.la >> src/Makefile.config
+   echo src-install : libhyphen-install >> src/Makefile.config
+fi

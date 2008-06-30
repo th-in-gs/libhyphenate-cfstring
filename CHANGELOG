@@ -1,0 +1,8 @@
+Version 1.1.0: 
+- Normalizing strings to lowercase now using glib's UTF-8 support to help
+  matching non-ASCII characters.
+- Hyphens are now placed by an HyphenationRule class to facilitate
+  non-standard hyphenation.
+- Non-standard hyphenation (like in old german: Schiffahrt => Schiff-fahrt,
+  hungarian asszonnyal => asz-szony-nyal) is supported now. 
+  See README.nonstandard

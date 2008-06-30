@@ -179,7 +179,7 @@ auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
    char pri[sizeOfPri];
    memset(pri, 0, sizeOfPri);
     
-   uint sizeOfRules = (w.size() + 2) * sizeof(HyphenationRule);
+   uint sizeOfRules = (w.size() + 1) * sizeof(HyphenationRule);
    const HyphenationRule *rules[sizeOfRules];
    memset(rules, 0, sizeOfRules);
     

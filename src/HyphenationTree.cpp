@@ -173,9 +173,16 @@ auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
    w += ".";
 
    /* Vectors for priorities and rules. */
-   vector<char> pri(w.size()+2,0);
-   vector<const HyphenationRule*> rules(w.size()+1, NULL);
-
+   //vector<char> pri(w.size()+2,0);
+   //vector<const HyphenationRule*> rules(w.size()+1, NULL);
+   uint sizeOfPri = (w.size() + 2) * sizeof(char);
+   char pri[sizeOfPri];
+   memset(pri, 0, sizeOfPri);
+    
+   uint sizeOfRules = (w.size() + 2) * sizeof(HyphenationRule);
+   const HyphenationRule *rules[sizeOfRules];
+   memset(rules, 0, sizeOfRules);
+    
    /* For each suffix of the expanded word, search all matching prefixes.
     * That way, each possible match is found. Note the pointer arithmetics
     * in the first and second argument. */

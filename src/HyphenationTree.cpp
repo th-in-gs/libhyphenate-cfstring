@@ -160,35 +160,34 @@ auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
 {
    /* Prepend and append a . to the string (word start and end), and convert
     * all characters to lower case to ease matching. */
-   std::string w = ".";
-   {
-      gunichar *gs = g_utf8_to_ucs4_fast(word.c_str(), -1, NULL);
-      for (int i = 0; gs[i] != 0; i++)
-         gs[i] = g_unichar_tolower(gs[i]);
-      gchar *lowerChars = g_ucs4_to_utf8(gs, -1, NULL, NULL, NULL);
-      g_free(gs);
-      w += lowerChars;
+   const gchar *charsToUse = word.c_str();
+   gchar *lowerChars = g_utf8_strdown(charsToUse, -1);
+   if(lowerChars) {
+      charsToUse = lowerChars;
+   }
+   uint charsToUseSize = strlen(charsToUse);
+   uint wSize = charsToUseSize + 2;
+   gchar *w = (gchar *)malloc(wSize + 1);
+   w[0] = '.';
+   memcpy(w+1, charsToUse, charsToUseSize);
+   w[wSize-1] = '.';
+   w[wSize] = '\0';
+   if(lowerChars) {
       g_free(lowerChars);
    }
-   w += ".";
-
-   /* Vectors for priorities and rules. */
-   //vector<char> pri(w.size()+2,0);
-   //vector<const HyphenationRule*> rules(w.size()+1, NULL);
-   uint sizeOfPri = (w.size() + 2) * sizeof(char);
-   char pri[sizeOfPri];
-   memset(pri, 0, sizeOfPri);
-    
-   uint sizeOfRules = (w.size() + 1) * sizeof(HyphenationRule);
-   const HyphenationRule *rules[sizeOfRules];
-   memset(rules, 0, sizeOfRules);
+   
+   /* Arrays for priorities and rules. */
+   char *pri = (char *)calloc(wSize + 2, sizeof(char));
+   const HyphenationRule **rules = (const HyphenationRule **)calloc(wSize + 1, sizeof(HyphenationRule *));
     
    /* For each suffix of the expanded word, search all matching prefixes.
     * That way, each possible match is found. Note the pointer arithmetics
     * in the first and second argument. */
-   for (uint i = 0; i < w.size()-1 && i <= stop_at; i++)
-      root->apply_patterns((&pri[i]), (&rules[i]), w.c_str() + i);
+   for (uint i = 0; i < wSize-1 && i <= stop_at; i++)
+      root->apply_patterns((&pri[i]), (&rules[i]), w + i);
 
+   free(pri);
+   
    /* Copy the results to a shorter vector. */
    auto_ptr<vector<const HyphenationRule*> > output_rules(
       new vector<const HyphenationRule*>(word.size(), NULL));
@@ -196,16 +195,21 @@ auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
    /* We honor the safe areas at the start and end of each word here. */
    /* Please note that the incongruence between start and end is due
     * to the fact that hyphenation happens _before_ each character. */
-   uint ind_start = 1, ind_end = w.size()-1;
-   for (uint skip = 0; skip < start_safe && ind_start < w.size(); ind_start++)
+   uint ind_start = 1, ind_end = wSize-1;
+   for (uint skip = 0; skip < start_safe && ind_start < wSize; ind_start++)
       if ((w[ind_start] & 0xC0) != 0x80)
          skip++;
    for (uint skip = 0; skip < end_safe && ind_end > 0; ind_end--)
       if ((w[ind_end] & 0xC0) != 0x80)
          skip++;
 
+   free(w);
+   
    for (uint i = ind_start; i <= ind_end; i++)
       (*output_rules)[i-1] = rules[i];
+   
+   free(rules);
+   
    return output_rules;
 }
 

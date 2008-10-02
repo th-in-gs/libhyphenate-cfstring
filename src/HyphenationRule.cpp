@@ -25,17 +25,28 @@
 
 using namespace std;
 
-Hyphenate::HyphenationRule::HyphenationRule(std::string dpattern)
+Hyphenate::HyphenationRule::HyphenationRule(CFStringRef dpattern_string)
 : del_pre(0), skip_post(0)
 {
-   int priority = 0;
-   uint i;
+   CFIndex dpattern_length = CFStringGetLength(dpattern_string);
+   UniChar *dpattern = new UniChar[dpattern_length];
+   CFStringGetCharacters(dpattern_string, CFRangeMake(0, dpattern_length), dpattern);
+   
+   UniChar *key_builder = new UniChar[dpattern_length];
+   CFIndex key_builder_index = 0;
+   UniChar *insert_pre_builder = new UniChar[dpattern_length]; 
+   CFIndex insert_pre_builder_index = 0;
+   UniChar *insert_post_builder = new UniChar[dpattern_length]; 
+   CFIndex insert_post_builder_index = 0;
 
-   for (i = 0; i < dpattern.size() && dpattern[i] != '/'; i++)
+   int priority = 0;
+   CFIndex i;
+
+   for (i = 0; i < dpattern_length && dpattern[i] != '/'; i++)
       if (dpattern[i] >= '0' && dpattern[i] <= '9')
          priority = 10 * priority + dpattern[i] - '0';
       else {
-         key += dpattern[i];
+         key_builder[key_builder_index++] = dpattern[i];
          priorities.push_back(priority);
          priority = 0;
       }
@@ -45,12 +56,12 @@ Hyphenate::HyphenationRule::HyphenationRule(std::string dpattern)
    while (priorities.back() == 0) priorities.pop_back();
 
    /* Now check for nonstandard hyphenation. First, parse it. */
-   if (i < dpattern.size() && dpattern[i] == '/') {
+   if (i < dpattern_length && dpattern[i] == '/') {
       i += 1;    /* Ignore the /. */
 
       int field = 1;
       uint start = 0, cut = 0;
-      for (; i < dpattern.size(); i++) {
+      for (; i < dpattern_length; i++) {
          if (field == 1 && dpattern[i] == '=')
             field++;
          else if (field >= 2 && field <= 3 && dpattern[i] == ',')
@@ -58,16 +69,16 @@ Hyphenate::HyphenationRule::HyphenationRule(std::string dpattern)
          else if (field == 4 && (dpattern[i] < '0' || dpattern[i] > '9'))
             break;
          else if (field == 1)
-            insert_pre += dpattern[i];
+            insert_pre_builder[insert_pre_builder_index++] = dpattern[i];
          else if (field == 2)
-            insert_post += dpattern[i];
+            insert_post_builder[insert_post_builder_index++] = dpattern[i];
          else if (field == 3)
             start = start * 10 + dpattern[i] - '0';
          else if (field == 4)
             cut = cut * 10 + dpattern[i] - '0';
       }
       if (field < 4) /* There was no fourth field */
-         cut = key.size() - start;
+         cut = key_builder_index - start;
       if (field < 3)
          start = 1;
 
@@ -77,32 +88,82 @@ Hyphenate::HyphenationRule::HyphenationRule(std::string dpattern)
          del_pre++; skip_post--;
       }
    }
+
+   if(key_builder_index)
+      key = CFStringCreateWithCharacters(kCFAllocatorDefault, key_builder, key_builder_index);
+   else 
+      key = NULL;
+   
+   if(insert_pre_builder_index) 
+      insert_pre = CFStringCreateWithCharacters(kCFAllocatorDefault, insert_pre_builder, insert_pre_builder_index);
+   else
+      insert_pre = NULL;
+   
+   if(insert_post_builder_index) 
+      insert_post = CFStringCreateWithCharacters(kCFAllocatorDefault, insert_post_builder, insert_post_builder_index);
+   else
+      insert_post = NULL;
+      
+   delete[] dpattern;
 }
 
-int Hyphenate::HyphenationRule::apply(string& word, const string &hyph) const
+Hyphenate::HyphenationRule::~HyphenationRule()
 {
-   apply_first(word, hyph);
-   return apply_second(word);
+   if(key)
+      CFRelease(key);
+   
+   if(insert_pre)
+      CFRelease(insert_pre);
+   
+   if(insert_post)
+      CFRelease(insert_post);
 }
 
-void Hyphenate::HyphenationRule::apply_first(string& word, const string &hyph)
-   const
+pair<CFStringRef, int> Hyphenate::HyphenationRule::create_applied_string(CFStringRef word, CFStringRef hyph) const
 {
-   if (del_pre > 0) word.erase(word.size()-del_pre);
-   word += insert_pre;
-   word += hyph;
+   CFStringRef intermediateWord = create_applied_string_first(word, hyph);
+   pair<CFStringRef, int> ret = create_applied_string_second(intermediateWord);
+   CFRelease(intermediateWord);
+   return ret;
 }
 
-int Hyphenate::HyphenationRule::apply_second(string& word) const
+CFStringRef Hyphenate::HyphenationRule::create_applied_string_first(CFStringRef word, CFStringRef hyph) const
 {
-   if (del_pre > 0) word.erase(word.size()-del_pre);
-   word += insert_post;
-   return skip_post;
+   CFMutableStringRef ret;
+   if(insert_pre) {
+      ret = CFStringCreateMutable(kCFAllocatorDefault, 
+                                  CFStringGetLength(insert_pre) +
+                                  CFStringGetLength(word) +
+                                  CFStringGetLength(hyph));
+      CFStringAppend(ret, word);
+      CFStringAppend(ret, insert_pre);
+   } else {
+      ret = CFStringCreateMutable(kCFAllocatorDefault, 
+                                  CFStringGetLength(word) +
+                                  CFStringGetLength(hyph));
+      CFStringAppend(ret, word);
+   }
+   CFStringAppend(ret, hyph);
+
+   return ret;
 }
 
-auto_ptr<char> Hyphenate::HyphenationRule::replacement_string() const { 
-   string s = (insert_pre + "=" + insert_post);
-   char *r = (char *)malloc( (s.size()+1) * sizeof(char));
-   strcpy(r, s.c_str());
-   return auto_ptr<char>(r);
+pair<CFStringRef, int> Hyphenate::HyphenationRule::create_applied_string_second(CFStringRef word) const
+{
+   if(insert_post) {
+      CFStringRef ret;
+      if(word) {
+         CFMutableStringRef mutableRet = CFStringCreateMutable(kCFAllocatorDefault, CFStringGetLength(word) + CFStringGetLength(insert_post));
+         CFStringAppend(mutableRet, word);
+         CFStringAppend(mutableRet, insert_post);
+         ret = mutableRet;
+      } else {
+         ret = (CFStringRef)CFRetain(insert_post);
+      }
+      return make_pair(ret, skip_post);
+   } else {
+      if(word)
+         CFRetain(word);
+      return make_pair(word, skip_post);
+   }
 }

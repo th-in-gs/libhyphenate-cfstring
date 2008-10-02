@@ -23,6 +23,7 @@
 
 #include <string>
 #include <vector>
+#include <CoreFoundation/CoreFoundation.h>
 
 namespace Hyphenate {
    /** The HyphenationRule class represents a single Hyphenation Rule, that
@@ -34,7 +35,7 @@ namespace Hyphenate {
    class HyphenationRule {
       private:
          int del_pre, skip_post;
-         std::string key, insert_pre, insert_post;
+         CFStringRef key, insert_pre, insert_post;
          std::vector<char> priorities;
 
          std::string replacement;
@@ -43,8 +44,9 @@ namespace Hyphenate {
          /* HyphenationRule is constructed from a string consisting of
           * letters with numbers strewn in. The numbers are the priorities.
           * In addition, a / will start a non-standard hyphenization. */
-         HyphenationRule(std::string source_string);
-
+         HyphenationRule(CFStringRef source_string);
+         ~HyphenationRule();
+      
          /** Call this method once an hyphen would, according to its base rule,
          *   be placed. Returns the number of bytes that should not be  
          *   printed afterwards.
@@ -64,12 +66,12 @@ namespace Hyphenate {
          *   char *rest = "fahrt";
          *   word += rest+skip;
          */
-         int apply(std::string& word, const std::string &hyphen) const;
+         std::pair<CFStringRef, int> create_applied_string(CFStringRef word, CFStringRef hyphen) const;
          /** Only apply the first part, that is, up to and including the
           *  hyphen. */
-         void apply_first(std::string& word, const std::string &hyphen) const;
+         CFStringRef create_applied_string_first(CFStringRef word, CFStringRef hyphen) const;
          /** Only apply the second part, after the hyphen. */
-         int apply_second(std::string& word) const;
+         std::pair<CFStringRef, int> create_applied_string_second(CFStringRef word) const;
 
          /** Returns true iff there is a priority value != 0 for this offset
           *  or a larger one. */
@@ -80,33 +82,17 @@ namespace Hyphenate {
          inline char priority(uint offset) const { return priorities[offset]; }
 
          /** Returns the pattern to match for this rule to apply. */
-         inline std::string &getKey() { return key; }
+         inline CFStringRef getKey() { return key; }
 
          /** Returns the amount of bytes that will additionally be needed
           *  in front of the hyphen if this rule is applied. 0 for standard
           *  hyphenation, 1 for Schiff-fahrt. */
          int spaceNeededPreHyphen() const 
-            { return insert_pre.size() - del_pre; }
+      { return (insert_pre ? CFStringGetLength(insert_pre) : 0) - del_pre; }
          
          /** Returns true iff this rule is not a standard hyphenation rule. */
          bool isNonStandard() const
-            { return del_pre != 0 || skip_post != 0 || 
-                     (!insert_pre.empty()) || (!insert_post.empty()); }
-
-         /** Only needed for libhnj implementation: 
-          *  Returns an malloc()-allocated char array consisting of the full
-          *  replacement of this rule, with a = between the parts. For example,
-          *  for Schiffahrt -> Schiff-fahrt this yields 'ff=' or 'ff=f',
-          *  depending on implementation. */
-         std::auto_ptr<char> replacement_string() const;
-         /** Only needed for libhnj implementation: 
-          *  Get the offset at which the hyphen will end up compared to a 
-          *  standard rule. 0 for standard rules, Schiff-fahrt would yield 1. */
-         int getHyphenOffset() const { return insert_pre.size() - del_pre; }
-         /** Only needed for libhnj implementation: 
-          * Returns the total number of bytes that need to be cut out
-          * before the replacement_string() should be inserted. */
-         int getTotalCutout() const { return skip_post + del_pre; }
+            { return del_pre != 0 || skip_post != 0 || insert_pre || insert_post; }
    };
 }
 

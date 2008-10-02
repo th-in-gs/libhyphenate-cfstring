@@ -26,6 +26,7 @@
 #include <string>
 #include <memory>
 #include <vector>
+#include <CoreFoundation/CoreFoundation.h>
 
 #include <iconv.h>
 
@@ -36,11 +37,6 @@ namespace Hyphenate {
    class Hyphenator {
       private:
 	 std::auto_ptr<HyphenationTree> dictionary;
-
-	 std::string hyphenate_word
-		  (const std::string &word, const std::string &hyphen)
-		  throw(std::domain_error);
-
       public:
          /** Build a hyphenator for the given language. The hyphenation
           *  patterns for the language will loaded from a file named like
@@ -60,61 +56,13 @@ namespace Hyphenate {
          /** Destructor. */
 	 ~Hyphenator();
 
-         /** The actual workhorse. You'll want to call this function once
-         * for each word (NEW: or complete string, not only word. The library
-         * will do the word-splitting for you) you want hyphenated.  
-         *  
-         *  Usage example: 
-         *  	Hyphenate::Hyphenator hyphenator(Language("de-DE"));
-         *  	hyphenator.hyphenate("Schifffahrt");
-         *
-         *  	yields "Schiff-fahrt", while 
-         *
-         *  	Hyphenate::Hyphenator hyphenator(Language("en"));
-         *  	hyphenator.hyphenate("example", "&shy;");
-         *
-         *  	yields "ex&shy;am&shy;ple".
-         *
-         *  \param word A single UTF-8 encoded word to be hyphenated.
-         *  \param hyphen The string to put at each possible
-         *                hyphenation point. The default is an ASCII dash.
-         */
-	 std::string hyphenate
-		  (const std::string &word,
-		   const std::string &hyphen = "-")
-		  throw(std::domain_error);
-
-         /** Find a single hyphenation point in the string so that the first
-          *  part (including a hyphen) will be shorter or equal in length
-          *  to the parameter len. If this is not possible, choose the shortest
-          *  possible string.
-          *
-          *  The first element is the result, the second element the rest of
-          *  the string.
-          *
-          *  Example: To format a piece of text to width 60, use the following
-          *  loop:
-          *  string rest = text;
-          *  string result = "";
-          *  while ( ! rest.empty() ) {
-          *     pair<string,string> p = your_hyphenator.hyphenate_at(rest);
-          *     result += p.first + "\n"
-          *     rest = p.second;
-          *  }
-          **/
-         std::pair<std::string,std::string> hyphenate_at
-                     (const std::string &word,
-                      const std::string &hyphen = "-",
-                      size_t len = std::string::npos)
-         throw(std::domain_error);
-
          /** Just apply the hyphenation patterns to the word, but don't 
           *  hyphenate anything.
           *
           *  \returns A vector with the same size as the word with a non-NULL
           *           entry for every hyphenation point. */
          std::auto_ptr<std::vector<const HyphenationRule*> > 
-            applyHyphenationRules(const std::string& word);
+            applyHyphenationRules(CFStringRef word);
    };
 }
 

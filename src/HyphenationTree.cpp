@@ -36,7 +36,7 @@ using namespace Hyphenate;
 * indexed by letters. */
 class Hyphenate::HyphenationNode {
    public:
-      typedef std::map<char, HyphenationNode*> JumpTable;
+      typedef std::map<UniChar, HyphenationNode*> JumpTable;
       /* Table of children */
       JumpTable jump_table;
       /* Hyphenation pattern associated with the full path to this node. */
@@ -52,13 +52,13 @@ class Hyphenate::HyphenationNode {
 
       /** Find a particular jump table entry, or NULL if there is 
          * none for that letter. */
-      inline const HyphenationNode *find(char arg) const {
+      inline const HyphenationNode *find(UniChar arg) const {
          JumpTable::const_iterator i = jump_table.find(arg);
          if (i != jump_table.end()) return i->second; else return NULL;
       }
       /** Find a particular jump table entry, or NULL if there is none 
          * for that letter. */
-      inline HyphenationNode *find(char arg) {
+      inline HyphenationNode *find(UniChar arg) {
          JumpTable::iterator i = jump_table.find(arg);
          if (i != jump_table.end()) return i->second; else return NULL;
       }
@@ -68,14 +68,14 @@ class Hyphenate::HyphenationNode {
       * \param pattern The character pattern to match in the input word.
       * \param hp The digit-pattern for the hyphenation algorithm.
       */
-      void insert (const char *id, 
+      void insert (const UniChar *id, 
          std::auto_ptr<HyphenationRule> pattern);
 
       /** Apply all patterns for that subtree. */
       void apply_patterns(
          char *priority_buffer, 
          const HyphenationRule ** rule_buffer, 
-         const char *to_match) const;
+         UniChar *to_match) const;
 };
 
 Hyphenate::HyphenationTree::HyphenationTree() : 
@@ -87,22 +87,24 @@ Hyphenate::HyphenationTree::~HyphenationTree() {
 
 void Hyphenate::HyphenationTree::insert(auto_ptr<HyphenationRule> pattern) {
    /* Convert our key to lower case to ease matching. */
-   const char *upperCaseKey = pattern->getKey().c_str();
-   gunichar *gucs = g_utf8_to_ucs4_fast(upperCaseKey, -1, NULL);
-   for (int i = 0; gucs[i] != 0; i++)
-      gucs[i] = g_unichar_tolower(gucs[i]);
-   gchar *gs = g_ucs4_to_utf8(gucs, -1, NULL, NULL, NULL);
-   g_free(gucs);
+   CFStringRef upperCaseKey = pattern->getKey();
+   CFIndex length = CFStringGetLength(upperCaseKey);
+   CFMutableStringRef lowercaseKey = CFStringCreateMutableCopy(kCFAllocatorDefault, length, upperCaseKey);
+   CFStringLowercase(lowercaseKey, NULL);
+   UniChar *lowercaseKeyCharacters = new UniChar[length  + 1];
+   CFStringGetCharacters(lowercaseKey, CFRangeMake(0, length), lowercaseKeyCharacters);
+   lowercaseKeyCharacters[length] = 0;
+   CFRelease(lowercaseKey);
 
-   root->insert(gs, pattern);
-   g_free(gs);
+   root->insert(lowercaseKeyCharacters, pattern);
+   delete[] lowercaseKeyCharacters;
 }
 
-void HyphenationNode::insert (const char* key_string, 
+void HyphenationNode::insert (const UniChar* key_characters, 
                               auto_ptr<HyphenationRule> pattern) 
 {
    /* Is this the terminal node for that pattern? */
-   if (key_string[0] == 0) {
+   if (key_characters[0] == 0) {
       /* If we descended the tree all the way to the last letter, we can now
        * write the pattern into this node. */
 
@@ -110,27 +112,27 @@ void HyphenationNode::insert (const char* key_string,
    } else  {
       /* If not, however, we make sure that the branch for our letter exists
        * and descend. */
-      char key = key_string[0];
+      UniChar key = key_characters[0];
       /* Ensure presence of a branch for that letter. */
       HyphenationNode *p = find(key);
       if (!p) {
 	 p = new HyphenationNode();
-	 jump_table.insert(pair<char, HyphenationNode*>(key, p));
+	 jump_table.insert(make_pair(key, p));
       }
       /* Go to the next letter and descend. */
-      p->insert(key_string+1, pattern);
+      p->insert(key_characters+1, pattern);
    }
 }
 
 void Hyphenate::HyphenationNode::apply_patterns(
    char *priority_buffer, 
    const HyphenationRule ** rule_buffer, 
-   const char *to_match) const
+   UniChar *to_match) const
 {
    /* First of all, if we can descend further into the tree (that is,
     * there is an input char left and there is a branch in the tree),
     * do so. */
-   char key = to_match[0];
+   UniChar key = to_match[0];
 
    if (key != 0) {
       const HyphenationNode *next = find(key);
@@ -150,65 +152,81 @@ void Hyphenate::HyphenationNode::apply_patterns(
 }
 
 auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
-   (const string &word) const
+   (CFStringRef word) const
 {
-   return applyPatterns(word, string::npos);
+   return applyPatterns(word, INT_MAX);
 }
 
 auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
-   (const string &word, size_t stop_at) const
+   (CFStringRef word, CFIndex stop_at) const
 {
    /* Prepend and append a . to the string (word start and end), and convert
-    * all characters to lower case to ease matching. */
-   const gchar *charsToUse = word.c_str();
-   gchar *lowerChars = g_utf8_strdown(charsToUse, -1);
-   if(lowerChars) {
-      charsToUse = lowerChars;
-   }
-   uint charsToUseSize = strlen(charsToUse);
-   uint wSize = charsToUseSize + 2;
-   gchar *w = (gchar *)malloc(wSize + 1);
-   w[0] = '.';
-   memcpy(w+1, charsToUse, charsToUseSize);
-   w[wSize-1] = '.';
-   w[wSize] = '\0';
-   if(lowerChars) {
-      g_free(lowerChars);
+    * all characters to lower case to ease matching. */   
+
+   CFCharacterSetRef upperCaseLetterCharacterSet = CFCharacterSetGetPredefined(kCFCharacterSetUppercaseLetter);
+   CFMutableStringRef lowerCaseStringToRelease;
+   CFRange foundRange;
+   CFIndex wordLength = CFStringGetLength(word);
+   if(CFStringFindCharacterFromSet(word, upperCaseLetterCharacterSet, CFRangeMake(0, wordLength), 0, &foundRange)) {
+      lowerCaseStringToRelease = CFStringCreateMutableCopy(kCFAllocatorDefault, wordLength, word);
+      CFStringLowercase(lowerCaseStringToRelease, NULL);
+      word = lowerCaseStringToRelease;
+   } else {
+      lowerCaseStringToRelease = NULL;
    }
    
+   CFCharacterSetRef lowerCaseLetterCharacterSet = CFCharacterSetGetPredefined(kCFCharacterSetLowercaseLetter);
+
+   CFIndex hyphenation_range_start;
+   if(CFStringFindCharacterFromSet(word, upperCaseLetterCharacterSet, CFRangeMake(0, wordLength), 0, &foundRange)) {
+      hyphenation_range_start = foundRange.location;
+   } else {
+      hyphenation_range_start = 0;
+   }
+   
+   CFIndex hyphenation_range_length;
+   if(CFStringFindCharacterFromSet(word, lowerCaseLetterCharacterSet, CFRangeMake(0, wordLength),  kCFCompareBackwards, &foundRange)) {
+      hyphenation_range_length = foundRange.location + foundRange.length - hyphenation_range_start;
+   } else {
+      hyphenation_range_length = wordLength - hyphenation_range_start;
+   }
+   
+   CFIndex w_size = hyphenation_range_length + 2;
+   UniChar *characters = new UniChar[w_size];
+   characters[0] = '.';
+   CFStringGetCharacters(word, CFRangeMake(hyphenation_range_start, hyphenation_range_length), characters + 1);
+   characters[hyphenation_range_length + 1] = '.';
+   
    /* Arrays for priorities and rules. */
-   char *pri = (char *)calloc(wSize + 2, sizeof(char));
-   const HyphenationRule **rules = (const HyphenationRule **)calloc(wSize + 1, sizeof(HyphenationRule *));
+   char *pri = (char *)calloc(w_size + 2, sizeof(char));
+   const HyphenationRule **rules = (const HyphenationRule **)calloc(w_size + 3, sizeof(HyphenationRule *));
     
    /* For each suffix of the expanded word, search all matching prefixes.
     * That way, each possible match is found. Note the pointer arithmetics
     * in the first and second argument. */
-   for (uint i = 0; i < wSize-1 && i <= stop_at; i++)
-      root->apply_patterns((&pri[i]), (&rules[i]), w + i);
+   for (CFIndex i = 0; i < w_size-1 && i <= stop_at; i++)
+      root->apply_patterns((&pri[i]), (&rules[i]), characters + i);
 
    free(pri);
    
    /* Copy the results to a shorter vector. */
    auto_ptr<vector<const HyphenationRule*> > output_rules(
-      new vector<const HyphenationRule*>(word.size(), NULL));
+      new vector<const HyphenationRule*>(wordLength, NULL));
    
    /* We honor the safe areas at the start and end of each word here. */
    /* Please note that the incongruence between start and end is due
     * to the fact that hyphenation happens _before_ each character. */
-   uint ind_start = 1, ind_end = wSize-1;
-   for (uint skip = 0; skip < start_safe && ind_start < wSize; ind_start++)
-      if ((w[ind_start] & 0xC0) != 0x80)
-         skip++;
-   for (uint skip = 0; skip < end_safe && ind_end > 0; ind_end--)
-      if ((w[ind_end] & 0xC0) != 0x80)
-         skip++;
-
-   free(w);
+   uint ind_start = 1 + start_safe, ind_end = w_size - 1 - end_safe;
    
    for (uint i = ind_start; i <= ind_end; i++)
-      (*output_rules)[i-1] = rules[i];
+      (*output_rules)[hyphenation_range_start + i - 1] = rules[i];
    
    free(rules);
+   
+   if(lowerCaseStringToRelease) 
+      CFRelease(lowerCaseStringToRelease);
+   
+   delete[] characters;
    
    return output_rules;
 }
@@ -229,13 +247,10 @@ void HyphenationTree::loadPatterns(istream &i) {
             ((num_field == 0) ? start_safe : end_safe) = atoi(pattern.c_str());
             num_field++;
 	 } else if (pattern.size()) {
-            if ( ! g_utf8_validate(pattern.c_str(), -1, NULL) )
-               throw std::domain_error(
-                  "Hyphenation pattern files must be UTF-8 encoded. " +
-                  ("The pattern " + pattern) + " is not.");
-
+	    CFStringRef patternString = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, (UInt8 *)pattern.c_str(), pattern.size(), kCFStringEncodingUTF8, false, kCFAllocatorNull);
             insert(
-               auto_ptr<HyphenationRule>(new HyphenationRule(pattern)));
+               auto_ptr<HyphenationRule>(new HyphenationRule(patternString)));
+	    CFRelease(patternString);
          }
 
 	 /* Reinitialize state. */
@@ -250,7 +265,11 @@ void HyphenationTree::loadPatterns(istream &i) {
       }
    }
 
-   if (pattern.size()) 
-      insert(auto_ptr<HyphenationRule>(new HyphenationRule(pattern)));
+   if (pattern.size())  {
+      CFStringRef patternString = CFStringCreateWithBytesNoCopy(kCFAllocatorDefault, (UInt8 *)pattern.c_str(), pattern.size(), kCFStringEncodingUTF8, false, kCFAllocatorNull);
+      insert(
+	     auto_ptr<HyphenationRule>(new HyphenationRule(patternString)));
+      CFRelease(patternString);
+   }
 }
 

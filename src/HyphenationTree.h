@@ -24,6 +24,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <CoreFoundation/CoreFoundation.h>
 #include "HyphenationRule.h"
 
 namespace Hyphenate {
@@ -60,12 +61,12 @@ namespace Hyphenate {
           *  applied before the addition of the next letter of the string.
           *  The pointers in that vector point into this tree. */
          std::auto_ptr<std::vector<const HyphenationRule*> > applyPatterns
-               (const std::string &word) const; 
+               (CFStringRef word) const; 
 
          /** Like applyPattern, but will only hyphenate up to the letter
           *  end_at. */
          std::auto_ptr<std::vector<const HyphenationRule*> > applyPatterns
-               (const std::string &word, size_t end_at) const; 
+               (CFStringRef word, CFIndex end_at) const; 
    };
 }
 

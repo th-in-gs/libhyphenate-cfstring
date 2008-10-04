@@ -131,17 +131,17 @@ CFStringRef Hyphenate::HyphenationRule::create_applied_string_first(CFStringRef 
 {
    CFMutableStringRef ret;
    if(insert_pre) {
-      ret = CFStringCreateMutable(kCFAllocatorDefault, 
-                                  CFStringGetLength(insert_pre) +
-                                  CFStringGetLength(word) +
-                                  CFStringGetLength(hyph));
-      CFStringAppend(ret, word);
+      ret = CFStringCreateMutableCopy(kCFAllocatorDefault, 
+                                      CFStringGetLength(insert_pre) +
+                                      CFStringGetLength(word) +
+                                      CFStringGetLength(hyph),
+                                      word);
       CFStringAppend(ret, insert_pre);
    } else {
-      ret = CFStringCreateMutable(kCFAllocatorDefault, 
-                                  CFStringGetLength(word) +
-                                  CFStringGetLength(hyph));
-      CFStringAppend(ret, word);
+      ret = CFStringCreateMutableCopy(kCFAllocatorDefault, 
+                                      CFStringGetLength(word) +
+                                      CFStringGetLength(hyph),
+                                      word);
    }
    CFStringAppend(ret, hyph);
 

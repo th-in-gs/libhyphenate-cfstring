@@ -36,33 +36,58 @@ using namespace Hyphenate;
 * indexed by letters. */
 class Hyphenate::HyphenationNode {
    public:
-      typedef std::map<UniChar, HyphenationNode*> JumpTable;
+      typedef std::map<UniChar, HyphenationNode*> JumpMap;
       /* Table of children */
-      JumpTable jump_table;
+      HyphenationNode* jump_table[26];
+      JumpMap *jump_map;
       /* Hyphenation pattern associated with the full path to this node. */
       std::auto_ptr<HyphenationRule> hyphenation_pattern;
 
-      HyphenationNode() {}
+      HyphenationNode() : jump_map(NULL) {
+	 memset((void *)jump_table, 0, 26 * sizeof(HyphenationNode*));
+      }
+	 
       ~HyphenationNode() {
          /* The destructor has to destroy all childrens. */
-         for (JumpTable::iterator i = jump_table.begin();
-               i != jump_table.end(); i++)
-            delete i->second;
+	 for (int i = 0; i < 26; ++i) {
+	    if(jump_table[i]) {
+	       delete jump_table[i];
+	    }
+	 }
+	 if(jump_map) {
+	    for (JumpMap::iterator i = jump_map->begin();
+		  i != jump_map->end(); i++)
+	       delete i->second;
+	    delete jump_map;
+	 }
       }
-
-      /** Find a particular jump table entry, or NULL if there is 
-         * none for that letter. */
-      inline const HyphenationNode *find(UniChar arg) const {
-         JumpTable::const_iterator i = jump_table.find(arg);
-         if (i != jump_table.end()) return i->second; else return NULL;
-      }
+   
       /** Find a particular jump table entry, or NULL if there is none 
-         * for that letter. */
-      inline HyphenationNode *find(UniChar arg) {
-         JumpTable::iterator i = jump_table.find(arg);
-         if (i != jump_table.end()) return i->second; else return NULL;
+        * for that letter. */
+      inline const HyphenationNode *find(UniChar arg) const {
+	 if(arg >= 'a' && arg <= 'z') {
+	    return jump_table[arg - 'a'];
+	 } else if(jump_map) {
+	    JumpMap::iterator i = jump_map->find(arg);
+	    if (i != jump_map->end()) return i->second; else return NULL;
+	 } else {
+	    return NULL;
+	 }
       }
-
+      
+      /** Find a particular jump table entry, or NULL if there is none 
+        * for that letter. */
+      inline HyphenationNode *find(UniChar arg) {
+	 if(arg >= 'a' && arg <= 'z') {
+	    return jump_table[arg - 'a'];
+	 } else if(jump_map) {
+	    JumpMap::iterator i = jump_map->find(arg);
+	    if (i != jump_map->end()) return i->second; else return NULL;
+	 } else {
+	    return NULL;
+	 }
+      }
+   
       /** Insert a particular hyphenation pattern into this 
          *  hyphenation subtree.
       * \param pattern The character pattern to match in the input word.
@@ -117,7 +142,13 @@ void HyphenationNode::insert (const UniChar* key_characters,
       HyphenationNode *p = find(key);
       if (!p) {
 	 p = new HyphenationNode();
-	 jump_table.insert(make_pair(key, p));
+	 if(key >= 'a' && key <= 'z') {
+	    jump_table[key - 'a'] = p;
+	 } else {
+	    if(!jump_map)
+	       jump_map = new JumpMap();
+	    jump_map->insert(make_pair(key, p));
+	 }
       }
       /* Go to the next letter and descend. */
       p->insert(key_characters+1, pattern);
@@ -178,7 +209,7 @@ auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
    CFCharacterSetRef lowerCaseLetterCharacterSet = CFCharacterSetGetPredefined(kCFCharacterSetLowercaseLetter);
 
    CFIndex hyphenation_range_start;
-   if(CFStringFindCharacterFromSet(word, upperCaseLetterCharacterSet, CFRangeMake(0, wordLength), 0, &foundRange)) {
+   if(CFStringFindCharacterFromSet(word, lowerCaseLetterCharacterSet, CFRangeMake(0, wordLength), 0, &foundRange)) {
       hyphenation_range_start = foundRange.location;
    } else {
       hyphenation_range_start = 0;

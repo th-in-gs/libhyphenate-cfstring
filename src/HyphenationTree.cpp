@@ -22,7 +22,6 @@
 /* ------------- Implementation for HyphenationTree.h ---------------- */
 
 #include "HyphenationTree.h"
-#include <glib.h>
 #include <iostream>
 #include <stdexcept>
 

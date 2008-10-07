@@ -30,7 +30,6 @@
 
 #include <iconv.h>
 #include <errno.h>
-#include <glib/gunicode.h>
 
 #include "HyphenationRule.h"
 #include "HyphenationTree.h"

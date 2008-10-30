@@ -36,7 +36,8 @@ namespace Hyphenate {
    class HyphenationTree {
       private:
          HyphenationNode* root;
-         uint start_safe, end_safe;
+         CFIndex start_safe, end_safe;
+         CFCharacterSetRef non_lower_case_letter_characte_set;
 
       public:
          /** The constructor constructs an empty tree, which can be filled

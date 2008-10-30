@@ -24,6 +24,7 @@
 #include "HyphenationTree.h"
 #include <iostream>
 #include <stdexcept>
+#include <algorithm>
 
 using namespace std;
 using namespace Hyphenate;
@@ -103,10 +104,13 @@ class Hyphenate::HyphenationNode {
 };
 
 Hyphenate::HyphenationTree::HyphenationTree() : 
-   root(new HyphenationNode()), start_safe(1), end_safe(1) {}
+   root(new HyphenationNode()), start_safe(1), end_safe(1) {
+      non_lower_case_letter_characte_set = CFCharacterSetCreateInvertedSet(kCFAllocatorDefault, CFCharacterSetGetPredefined(kCFCharacterSetLowercaseLetter));
+}
 
 Hyphenate::HyphenationTree::~HyphenationTree() {
    delete root;
+   CFRelease(non_lower_case_letter_characte_set);
 }
 
 void Hyphenate::HyphenationTree::insert(auto_ptr<HyphenationRule> pattern) {
@@ -204,28 +208,12 @@ auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
    } else {
       lowerCaseStringToRelease = NULL;
    }
-   
-   CFCharacterSetRef lowerCaseLetterCharacterSet = CFCharacterSetGetPredefined(kCFCharacterSetLowercaseLetter);
-
-   CFIndex hyphenation_range_start;
-   if(CFStringFindCharacterFromSet(word, lowerCaseLetterCharacterSet, CFRangeMake(0, wordLength), 0, &foundRange)) {
-      hyphenation_range_start = foundRange.location;
-   } else {
-      hyphenation_range_start = 0;
-   }
-   
-   CFIndex hyphenation_range_length;
-   if(CFStringFindCharacterFromSet(word, lowerCaseLetterCharacterSet, CFRangeMake(0, wordLength),  kCFCompareBackwards, &foundRange)) {
-      hyphenation_range_length = foundRange.location + foundRange.length - hyphenation_range_start;
-   } else {
-      hyphenation_range_length = wordLength - hyphenation_range_start;
-   }
-   
-   CFIndex w_size = hyphenation_range_length + 2;
+      
+   CFIndex w_size = wordLength + 2;
    UniChar *characters = new UniChar[w_size];
    characters[0] = '.';
-   CFStringGetCharacters(word, CFRangeMake(hyphenation_range_start, hyphenation_range_length), characters + 1);
-   characters[hyphenation_range_length + 1] = '.';
+   CFStringGetCharacters(word, CFRangeMake(0, wordLength), characters + 1);
+   characters[wordLength + 1] = '.';
    
    /* Arrays for priorities and rules. */
    char *pri = (char *)calloc(w_size + 2, sizeof(char));
@@ -249,7 +237,24 @@ auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
    uint ind_start = 1 + start_safe, ind_end = w_size - 1 - end_safe;
    
    for (uint i = ind_start; i <= ind_end; i++)
-      (*output_rules)[hyphenation_range_start + i - 1] = rules[i];
+      (*output_rules)[i - 1] = rules[i];
+   
+   /* Remove any hyphens within the safe-distance of punctuation */
+   CFRange searchRange = CFRangeMake(0, wordLength);
+   while (CFStringFindCharacterFromSet(word, non_lower_case_letter_characte_set, searchRange, 0, &foundRange)) {
+      CFIndex i = max(searchRange.location, foundRange.location - start_safe);
+      CFIndex upTo = min(wordLength, foundRange.location + foundRange.length + end_safe);
+      for (; i < upTo; ++i) {
+         (*output_rules)[i] = NULL;
+      }
+      if(upTo == wordLength) {
+         // May as well break, we've zeroed out th the end of the word.
+         break;
+      }
+      searchRange.location = searchRange.location + searchRange.length;
+      searchRange.length = wordLength - searchRange.location;
+   }
+   
    
    free(rules);
    

@@ -210,10 +210,11 @@ auto_ptr<vector<const HyphenationRule*> > HyphenationTree::applyPatterns
    }
       
    CFIndex w_size = wordLength + 2;
-   UniChar *characters = new UniChar[w_size];
+   UniChar *characters = new UniChar[w_size + 1];
    characters[0] = '.';
    CFStringGetCharacters(word, CFRangeMake(0, wordLength), characters + 1);
    characters[wordLength + 1] = '.';
+   characters[wordLength + 2] = 0;
    
    /* Arrays for priorities and rules. */
    char *pri = (char *)calloc(w_size + 2, sizeof(char));

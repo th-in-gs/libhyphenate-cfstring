@@ -1,3 +1,26 @@
+=== libhyphenate-cfstring ===
+
+This is Steve Wolter's libhyphenate:
+    http://swolter.sdf1.org/software/libhyphenate.html
+heavily modified to perform well on the iPhone (and probably Mac OS X, though
+that's not well tested), in the setting of Eucalyptus (http://eucalyptusapp.com/).  
+
+If you're lookig for a general purpose hyphenation library, I would heartily
+recommend that you take a look at Steve's original libhyphenate instead of this
+fork.  The way this fork has evolved, the API is now rather 'unusual'.
+
+The original can be found at: http://swolter.sdf1.org/software/libhyphenate.html
+
+Compared to the original, the major change is that (despite still being C++), 
+this version uses CFStrings internally, in UTF-16 format, rather than 8-bit C++ 
+std::strings.
+
+There have also been some optimisations made to make the hyphenation faster when 
+used on words with most characters in the 8-bit ASCII range, and some other, mostly
+CFString-specific, optimisations.
+
+Much of the documentation is unchanged from Steve's original.
+
 === Abstract ===
 
 This library provides an implementation of Frank Liangs hyphenation algorithm,
@@ -5,11 +28,7 @@ better known as the TeX hyphenation algorithm, for C++ and C.
 
 === Dependencies ===
 
-STL, POSIX and the GNOME glib.
-
-=== How to use ===
-
-An example program is supplied as example.cpp in this directory.
+C++, Mac OS X/iPhone OS CoreFoundation.
 
 === Hyphenation files ===
 

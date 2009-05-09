@@ -5,7 +5,7 @@ This is Steve Wolter's libhyphenate:
 heavily modified to perform well on the iPhone (and probably Mac OS X, though
 that's not well tested), in the setting of Eucalyptus (http://eucalyptusapp.com/).  
 
-If you're lookig for a general purpose hyphenation library, I would heartily
+If you're looking for a general purpose hyphenation library, I would heartily
 recommend that you take a look at Steve's original libhyphenate instead of this
 fork.  The way this fork has evolved, the API is now rather 'unusual'.
 
@@ -15,9 +15,9 @@ Compared to the original, the major change is that (despite still being C++),
 this version uses CFStrings internally, in UTF-16 format, rather than 8-bit C++ 
 std::strings.
 
-There have also been some optimisations made to make the hyphenation faster when 
-used on words with most characters in the 8-bit ASCII range, and some other, mostly
-CFString-specific, optimisations.
+There have also been some optimisations made to make hyphenation faster when 
+performed on words with most characters in the 8-bit ASCII range, and some 
+other, mostly CFString-specific, optimisations.
 
 Much of the documentation is unchanged from Steve's original.
 

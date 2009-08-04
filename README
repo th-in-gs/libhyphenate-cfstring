@@ -1,0 +1,86 @@
+=== libhyphenate-cfstring ===
+
+This is Steve Wolter's libhyphenate:
+    http://swolter.sdf1.org/software/libhyphenate.html
+heavily modified to perform well on the iPhone (and probably Mac OS X, though
+that's not well tested), in the setting of Eucalyptus (http://eucalyptusapp.com/).  
+
+If you're looking for a general purpose hyphenation library, I would heartily
+recommend that you take a look at Steve's original libhyphenate instead of this
+fork.  The way this fork has evolved, the API is now rather 'unusual'.
+
+The original can be found at: http://swolter.sdf1.org/software/libhyphenate.html
+
+Compared to the original, the major change is that (despite still being C++), 
+this version uses CFStrings internally, in UTF-16 format, rather than 8-bit C++ 
+std::strings.
+
+There have also been some optimisations made to make hyphenation faster when 
+performed on words with most characters in the 8-bit ASCII range, and some 
+other, mostly CFString-specific, optimisations.
+
+Much of the documentation is unchanged from Steve's original.
+
+=== Abstract ===
+
+This library provides an implementation of Frank Liangs hyphenation algorithm,
+better known as the TeX hyphenation algorithm, for C++ and C.
+
+=== Dependencies ===
+
+C++, Mac OS X/iPhone OS CoreFoundation.
+
+=== Hyphenation files ===
+
+In order to hyphenate text, one must supply knowledge about the language
+used. Unfortunately, both the well-established tex hyphenation dictionaries
+and the libhnj dictionaries used by Star Office lack one crucial bit of 
+information, namely how many characters have to be left unhyphenated at
+the start and end of each word. This breaks, for example, the german language
+patterns, which might be the language needing hyphenation most.
+
+Thus, we have to introduce yet another format (sorry for that), but I've tried
+to keep it as close to the established one as possible. I've precompiled the
+hyphenation patterns for the major languages I know about (english, french,
+german, spanish, italian).
+
+Luckily, the process of converting a TeX hyphenation dictionary for your own
+language is quite simple.
+In order to compile another language pattern, the TeX hyphenation file
+(usually residing in /usr/share/texmf-tetex/tex/generic/hyphen/) is a good
+start. That TeX file's main body is a huge number of words given as an
+argument to the \pattern command; you'll see word sniplets there intermingled
+with digits. In order to use them with libhyphenate, you'll have to
+
+a) snip all but the arguments of the \pattern command,
+b) expand all commands remaining in that argument string,
+c) convert all characters to UTF-8 and
+d) prefix the resulting patterns with a line giving two numbers separated by
+   a space. The first one of these numbers is the minimum number of characters 
+   at the start of each word before hyphenation occurs; the second is the 
+   minimum number of characters at the end that won't be hyphenated any more.
+
+=== Syntax of the hyphenation files ===
+
+Each hyphenation file is a list of whitespace-separated words. The first two
+words give the start-of-word and end-of-word hyphenation skip in decimal 
+numbers; all following words are hyphenation patterns, where a . marks the 
+start of the word and each number gives an hyphenation hint for the position
+it is at. 
+
+Example: The file
+2 2
+.and2uin.
+d1u
+
+will result in hyphenation between each d and u, but not in the word anduin.
+For more info, consult Frank Liang: Word Hy-phen-a-tion by Com-pu-ter.
+
+=== Further Documentation ===
+
+The code is documented extensively.
+
+=== License ===
+
+This package is licensed under the LGPL. Refer to the headings in each source
+file for more information.

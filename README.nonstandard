@@ -1,0 +1,23 @@
+Nonstandard hyphenation is supported by allowing replacement rules to occur in
+hyphenation, according to Laszlo Nemeths paper
+"Automatic non-standard hyphenation in OpenOffice", found at
+http://downloads.sourceforge.net/hunspell/tb87nemeth.pdf?modtime=1179269417&big_mirror=0
+
+Long story made short: After an hyphenation pattern, you may give a 
+non-standard rule looking like this:
+/<PRE>=<POST>[,S[,C]]
+
+PRE is a pre-hyphen string to be added to the result-string, POST a 
+post-hyphen string.
+S and C determine a length of string that will be deleted from the original
+string, relative to the start of the rule. S is the offset (starting with 0)
+of the deleted part, C the length. S defaults to 0, C to the the length of
+the pattern part minus S.
+
+Examples:
+schif1fahrt/ff=,4,1
+will replace the first f with ff for old german hyphenation when hyphenating.
+
+7-/=- 
+will result in every normal hyphen being repeated on the next word part:
+kung-fu will hyphenate as kung--fu

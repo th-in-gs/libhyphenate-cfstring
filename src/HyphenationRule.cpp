@@ -105,6 +105,9 @@ Hyphenate::HyphenationRule::HyphenationRule(CFStringRef dpattern_string)
       insert_post = NULL;
       
    delete[] dpattern;
+   delete[] key_builder;
+   delete[] insert_pre_builder; 
+   delete[] insert_post_builder; 
 }
 
 Hyphenate::HyphenationRule::~HyphenationRule()

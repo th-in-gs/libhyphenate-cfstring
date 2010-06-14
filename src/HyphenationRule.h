@@ -1,5 +1,8 @@
 /* libhyphenate: A TeX-like hyphenation algorithm.
- * Copyright (C) 2007 Steve Wolter
+ * Copyright (C) 2007 Steve Wolter 
+ *   http://swolter.sdf1.org/
+ * Modifications Copyright (C) 2009 - 2010 Things Made Out Of Other Things Ltd.
+ *   http://th.ingsmadeoutofotherthin.gs/
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -15,8 +18,6 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  *
- * If you have any questions, feel free to contact me:
- * http://swolter.sdf1.org
  **/
 #ifndef HYPHENATION_RULE_H
 #define HYPHENATION_RULE_H

@@ -1,5 +1,10 @@
 libhyphenate, a library for TeX-like hyphenation
-Copyright (C) 2007 Steve Wolter
+
+Copyright (C) 2007 Steve Wolter 
+	http://swolter.sdf1.org/
+
+Modifications Copyright (C) 2009 - 2010 Things Made Out Of Other Things
+	http://th.ingsmadeoutofotherthin.gs/
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public

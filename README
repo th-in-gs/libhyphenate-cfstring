@@ -50,7 +50,7 @@ In order to compile another language pattern, the TeX hyphenation file
 (usually residing in /usr/share/texmf-tetex/tex/generic/hyphen/) is a good
 start. That TeX file's main body is a huge number of words given as an
 argument to the \pattern command; you'll see word sniplets there intermingled
-with digits. In order to use them with libhyphenate, you'll have to
+with digits. In order to use them with libhyphenate-cfstring, you'll have to
 
 a) snip all but the arguments of the \pattern command,
 b) expand all commands remaining in that argument string,

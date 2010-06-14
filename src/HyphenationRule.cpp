@@ -1,4 +1,4 @@
-/* libhyphenate: A TeX-like hyphenation algorithm.
+/* libhyphenate-cfstring: A TeX-like hyphenation algorithm.
  * Copyright (C) 2007 Steve Wolter 
  *   http://swolter.sdf1.org/
  * Modifications Copyright (C) 2009 - 2010 Things Made Out Of Other Things Ltd.

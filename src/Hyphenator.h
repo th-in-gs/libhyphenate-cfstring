@@ -1,4 +1,4 @@
-/* libhyphenate: A TeX-like hyphenation algorithm.
+/* libhyphenate-cfstring: A TeX-like hyphenation algorithm.
  * Copyright (C) 2007 Steve Wolter 
  *   http://swolter.sdf1.org/
  * Modifications Copyright (C) 2009 - 2010 Things Made Out Of Other Things Ltd.
@@ -46,7 +46,7 @@ namespace Hyphenate {
           *  located in the directory given by the environment variable
           *  LIBHYPHENATE_PATH or, if this is empty, in the compiled-in
           *  pattern directory which defaults to 
-          *  /usr/local/share/libhyphenate/patterns .
+          *  /usr/local/share/libhyphenate-cfstring/patterns .
           *
           * \param lang The language for which hyphenation patterns will be
           *             loaded. */

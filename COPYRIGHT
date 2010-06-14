@@ -1,4 +1,5 @@
-libhyphenate, a library for TeX-like hyphenation
+libhyphenate-cfstring, a library for TeX-like hyphenation.
+Forked from libhyphenate, heavily modified for Mac OS X and iOS.
 
 Copyright (C) 2007 Steve Wolter 
 	http://swolter.sdf1.org/

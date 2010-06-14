@@ -1,4 +1,4 @@
-/* libhyphenate: A TeX-like hyphenation algorithm.
+/* libhyphenate-cfstring: A TeX-like hyphenation algorithm.
  * Copyright (C) 2007 Steve Wolter 
  *   http://swolter.sdf1.org/
  * Modifications Copyright (C) 2009 - 2010 Things Made Out Of Other Things Ltd.
@@ -105,6 +105,6 @@ std::string Language::find_suitable_file(const string &dir) const
 	 return path;
    }
 
-   throw domain_error("libhyphenate: No suitable hyphenation file for language "
+   throw domain_error("libhyphenate-cfstring: No suitable hyphenation file for language "
       + concat(a.size()) + " found in " + dir);
 }
